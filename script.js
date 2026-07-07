@@ -920,6 +920,7 @@ function renderPuzzle(node) {
   box.appendChild(wrap);
 
   if (p.type === "text") return puzzleText(wrap, p);
+  if (p.type === "stampOrder") return puzzleStampOrder(wrap, p);
   if (p.type === "choice") return puzzleChoice(wrap, p);
   if (p.type === "photo") return puzzlePhoto(wrap, p);
   if (p.type === "grid") return puzzleGrid(wrap, p);
@@ -1057,6 +1058,191 @@ function puzzleOrder(wrap, p) {
     if (JSON.stringify(seq.map(normalize)) !== JSON.stringify(p.answer.map(normalize))) return flash("顺序不对。");
     unlock(p.unlock, p.clue);
   };
+}
+function puzzleStampOrder(wrap, p) {
+  let selectedOrder = [];
+
+  wrap.innerHTML = `
+    <div class="stamp-puzzle">
+      <div class="stamp-instruction">
+        点击印章，将它们依次装入下方四个空位。
+      </div>
+
+      <div class="stamp-tray">
+        ${p.items.map(item => `
+          <button
+            class="stamp-piece"
+            data-name="${escapeHtml(item.name)}"
+            data-digit="${escapeHtml(item.digit)}"
+            type="button"
+          >
+            <span class="stamp-front">${escapeHtml(item.name)}</span>
+            <span class="stamp-mark">旧馆藏章</span>
+          </button>
+        `).join("")}
+      </div>
+
+      <div class="stamp-slots">
+        ${p.answer.map((_, index) => `
+          <button
+            class="stamp-slot"
+            data-index="${index}"
+            type="button"
+            aria-label="第 ${index + 1} 个印章位置"
+          >
+            <span class="slot-number">${index + 1}</span>
+            <span class="slot-content">空</span>
+          </button>
+        `).join("")}
+      </div>
+
+      <div id="stampMessage" class="stamp-message dim">
+        尚未恢复导航顺序。
+      </div>
+
+      <div class="stamp-controls">
+        <button id="stampSubmitBtn" type="button">读取印章背面</button>
+        <button id="stampClearBtn" type="button">重新排列</button>
+      </div>
+    </div>
+  `;
+
+  const pieces = [...wrap.querySelectorAll(".stamp-piece")];
+  const slots = [...wrap.querySelectorAll(".stamp-slot")];
+  const message = wrap.querySelector("#stampMessage");
+
+  function updateSlots() {
+    slots.forEach((slot, index) => {
+      const content = slot.querySelector(".slot-content");
+      const name = selectedOrder[index];
+
+      content.textContent = name || "空";
+      slot.classList.toggle("filled", Boolean(name));
+    });
+
+    message.textContent = selectedOrder.length
+      ? `当前顺序：${selectedOrder.join(" → ")}`
+      : "尚未恢复导航顺序。";
+  }
+
+  function addStamp(button) {
+    const name = button.dataset.name;
+
+    if (selectedOrder.includes(name)) {
+      flash("这枚印章已经装入了。");
+      return;
+    }
+
+    if (selectedOrder.length >= p.answer.length) {
+      flash("四个位置都已经装满。");
+      return;
+    }
+
+    selectedOrder.push(name);
+    button.disabled = true;
+    button.classList.add("used");
+
+    updateSlots();
+  }
+
+  pieces.forEach(button => {
+    button.addEventListener("click", () => addStamp(button));
+  });
+
+  slots.forEach(slot => {
+    slot.addEventListener("click", () => {
+      const index = Number(slot.dataset.index);
+
+      if (!selectedOrder[index]) {
+        return;
+      }
+
+      const removedName = selectedOrder[index];
+
+      selectedOrder.splice(index, 1);
+
+      const originalButton = pieces.find(
+        button => button.dataset.name === removedName
+      );
+
+      if (originalButton) {
+        originalButton.disabled = false;
+        originalButton.classList.remove("used");
+      }
+
+      updateSlots();
+    });
+  });
+
+  wrap.querySelector("#stampClearBtn").addEventListener("click", () => {
+    selectedOrder = [];
+
+    pieces.forEach(button => {
+      button.disabled = false;
+      button.classList.remove("used", "correct", "wrong");
+    });
+
+    slots.forEach(slot => {
+      slot.classList.remove("filled", "revealed");
+    });
+
+    updateSlots();
+  });
+
+  wrap.querySelector("#stampSubmitBtn").addEventListener("click", () => {
+    if (selectedOrder.length !== p.answer.length) {
+      flash("还有印章没有装入。");
+      return;
+    }
+
+    const normalizedCurrent = selectedOrder.map(normalize);
+    const normalizedAnswer = p.answer.map(normalize);
+
+    const isCorrect =
+      JSON.stringify(normalizedCurrent) ===
+      JSON.stringify(normalizedAnswer);
+
+    if (!isCorrect) {
+      slots.forEach(slot => slot.classList.add("wrong"));
+
+      setTimeout(() => {
+        slots.forEach(slot => slot.classList.remove("wrong"));
+      }, 700);
+
+      flash("装订孔无法对齐。这个顺序不属于旧馆藏系统。");
+      return;
+    }
+
+    slots.forEach((slot, index) => {
+      const item = p.items.find(
+        entry => normalize(entry.name) === normalize(selectedOrder[index])
+      );
+
+      slot.classList.add("revealed");
+
+      slot.querySelector(".slot-content").innerHTML = `
+        <span class="revealed-name">${escapeHtml(item.name)}</span>
+        <span class="revealed-digit">${escapeHtml(item.digit)}</span>
+      `;
+    });
+
+    message.innerHTML = `
+      印章背面数字已经恢复：
+      <strong class="restored-code">${escapeHtml(p.code)}</strong>
+    `;
+
+    const submitButton = wrap.querySelector("#stampSubmitBtn");
+    const clearButton = wrap.querySelector("#stampClearBtn");
+
+    submitButton.disabled = true;
+    clearButton.disabled = true;
+
+    setTimeout(() => {
+      unlock(p.unlock, p.clue);
+    }, 900);
+  });
+
+  updateSlots();
 }
 
 function puzzleFinal(wrap, p) {
