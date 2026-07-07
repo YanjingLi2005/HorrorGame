@@ -5,7 +5,8 @@ const NODES = [
     "title": "开馆公告",
     "type": "公开展厅 / 首页",
     "time": "06:12",
-    "body": "白桦小学数字纪念馆将于今日 08:00 自动开馆。\n\n本次维护内容：校史页面、照片目录、课堂复原模型、留言系统。馆方要求先修复公开展区，内部档案暂不开放。\n\n公告底部有一行灰色小字：若首页跳转失败，请从“校史时间轴”进入。",
+    "body": "白桦小学数字纪念馆将于今日 08:00 自动开馆。\n\n本次维护内容：校史页面、照片目录、课堂复原模型、留言系统。馆方要求先修复公开展区，内部档案暂不开放。",
+    "footerNote": "若首页跳转失败，请从“校史时间轴”进入。",
     "objective": "首页跳转脚本失效。",
     "puzzle": {
       "type": "text",
@@ -754,7 +755,15 @@ function render() {
   $("#pageTitle").textContent = node.title;
   $("#clock").textContent = node.time || "08:00";
   $("#fileType").textContent = node.type;
-  $("#bodyText").textContent = node.body;
+  $("#bodyText").innerHTML = `
+    <div>${escapeHtml(node.body).replace(/\n/g, "<br>")}</div>
+
+    ${
+      node.footerNote
+        ? `<div class="footer-note">${escapeHtml(node.footerNote)}</div>`
+        : ""
+    }
+  `;
   $("#objective").textContent = node.objective || "";
 
   renderPuzzle(node);
