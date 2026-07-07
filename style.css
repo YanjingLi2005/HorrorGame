@@ -87,3 +87,11 @@ repeating-linear-gradient(0deg,transparent 0 88px,rgba(255,255,255,.03) 89px 90p
 .hint-area{border-top:1px solid #413a2e;margin-top:14px;padding-top:12px}
 .hint-area button{border:1px solid #5f5644;background:#191611;color:#cfc2a8;padding:7px 10px;cursor:pointer}
 .hint-text{margin-top:8px;color:#9f9686;font-size:14px;line-height:1.6}
+.footer-note {
+  margin-top: 24px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+  color: #777;
+  font-size: 12px;
+}
