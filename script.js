@@ -763,7 +763,14 @@ function render() {
         : ""
     }
   `;
-  $("#objective").textContent = node.objective || "";
+  const objectiveBox = $("#objective");
+
+  if (node.objective) {
+    objectiveBox.textContent = node.objective;
+    objectiveBox.parentElement.style.display = "";
+  } else {
+    objectiveBox.parentElement.style.display = "none";
+  }
 
   renderPuzzle(node);
   renderHintBox(node);
